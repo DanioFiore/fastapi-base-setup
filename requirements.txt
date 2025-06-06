@@ -1,0 +1,15 @@
+fastapi
+uvicorn # for development server
+gunicorn # for production server
+sqlmodel
+sqlalchemy
+pydantic
+pydantic-settings
+black[jupyter] # run black . to format the code in the project to respect PEP 8
+psycopg[binary] # PostgreSQL adapter for Python
+alembic # for database migrations
+pydantic[email] # for email validation
+python-jose[cryptography] # for JWT tokens
+passlib[bcrypt] # for password hashing with
+redis
+requests # for HTTP requests in tests

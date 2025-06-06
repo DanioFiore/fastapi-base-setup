@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money Wizardry - JWT Auth Demo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .success {
+            color: #28a745;
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .info {
+            color: #17a2b8;
+            background: #d1ecf1;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .hidden {
+            display: none;
+        }
+        .user-info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .token-display {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+            margin: 10px 0;
+            border: 1px solid #dee2e6;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .section:last-child {
+            border-bottom: none;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧙‍♂️ Money Wizardry - JWT Authentication Demo</h1>
+        
+        <div id="messages"></div>
+        
+        <!-- Sezione Registrazione -->
+        <div class="section" id="register-section">
+            <h2>📝 Registrazione Utente</h2>
+            <div class="form-group">
+                <label for="reg-username">Username:</label>
+                <input type="text" id="reg-username" placeholder="Inserisci username">
+            </div>
+            <div class="form-group">
+                <label for="reg-email">Email:</label>
+                <input type="email" id="reg-email" placeholder="Inserisci email">
+            </div>
+            <div class="form-group">
+                <label for="reg-password">Password:</label>
+                <input type="password" id="reg-password" placeholder="Inserisci password (min 8 caratteri)">
+            </div>
+            <div class="form-group">
+                <label for="reg-confirm-password">Conferma Password:</label>
+                <input type="password" id="reg-confirm-password" placeholder="Conferma password">
+            </div>
+            <button onclick="registerUser()">Registrati</button>
+        </div>
+        
+        <!-- Sezione Login -->
+        <div class="section" id="login-section">
+            <h2>🔐 Login</h2>
+            <div class="form-group">
+                <label for="login-email">Email:</label>
+                <input type="email" id="login-email" placeholder="Inserisci email">
+            </div>
+            <div class="form-group">
+                <label for="login-password">Password:</label>
+                <input type="password" id="login-password" placeholder="Inserisci password">
+            </div>
+            <button onclick="loginUser()">Accedi</button>
+        </div>
+        
+        <!-- Sezione Utente Autenticato -->
+        <div class="section hidden" id="authenticated-section">
+            <h2>✅ Utente Autenticato</h2>
+            <div id="user-info" class="user-info"></div>
+            
+            <button onclick="getUserInfo()">Aggiorna Info Utente</button>
+            <button onclick="testProtectedEndpoint()">Test Endpoint Protetto</button>
+            <button onclick="refreshToken()">Refresh Token</button>
+            <button onclick="logoutUser()">Logout</button>
+            
+            <h3>🔑 Token Informazioni</h3>
+            <div id="token-info"></div>
+        </div>
+        
+        <!-- Sezione Test -->
+        <div class="section">
+            <h2>🧪 Test Funzionalità</h2>
+            <button onclick="testServerHealth()">Test Connessione Server</button>
+            <button onclick="testInvalidToken()">Test Token Invalido</button>
+            <button onclick="runFullTest()">Esegui Test Completo</button>
+        </div>
+    </div>
+
+    <script>
+        // Configurazione
+        const API_BASE_URL = 'http://localhost:8081';
+        
+        // Stato dell'applicazione
+        let accessToken = localStorage.getItem('access_token');
+        let refreshTokenValue = localStorage.getItem('refresh_token');
+        let currentUser = null;
+        
+        // Inizializzazione
+        document.addEventListener('DOMContentLoaded', function() {
+            if (accessToken) {
+                showAuthenticatedSection();
+                getUserInfo();
+            }
+        });
+        
+        // Utility functions
+        function showMessage(message, type = 'info') {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type;
+            messageDiv.textContent = message;
+            messagesDiv.appendChild(messageDiv);
+            
+            // Rimuovi il messaggio dopo 5 secondi
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+        
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+        }
+        
+        function showAuthenticatedSection() {
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('register-section').classList.add('hidden');
+            document.getElementById('authenticated-section').classList.remove('hidden');
+        }
+        
+        function showLoginSection() {
+            document.getElementById('login-section').classList.remove('hidden');
+            document.getElementById('register-section').classList.remove('hidden');
+            document.getElementById('authenticated-section').classList.add('hidden');
+        }
+        
+        function updateTokenDisplay() {
+            const tokenInfo = document.getElementById('token-info');
+            if (accessToken) {
+                tokenInfo.innerHTML = `
+                    <div class="token-display">
+                        <strong>Access Token:</strong><br>
+                        ${accessToken.substring(0, 50)}...
+                    </div>
+                    <div class="token-display">
+                        <strong>Refresh Token:</strong><br>
+                        ${refreshTokenValue ? refreshTokenValue.substring(0, 50) + '...' : 'Non disponibile'}
+                    </div>
+                `;
+            } else {
+                tokenInfo.innerHTML = '<p>Nessun token disponibile</p>';
+            }
+        }
+        
+        // API Functions
+        async function makeRequest(url, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE_URL}${url}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || `HTTP ${response.status}`);
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('Request failed:', error);
+                throw error;
+            }
+        }
+        
+        async function makeAuthenticatedRequest(url, options = {}) {
+            if (!accessToken) {
+                throw new Error('Nessun token di accesso disponibile');
+            }
+            
+            const authOptions = {
+                ...options,
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    ...options.headers
+                }
+            };
+            
+            try {
+                return await makeRequest(url, authOptions);
+            } catch (error) {
+                // Se il token è scaduto, prova a rinnovarlo
+                if (error.message.includes('401') || error.message.includes('Could not validate credentials')) {
+                    try {
+                        await refreshToken();
+                        // Riprova la richiesta con il nuovo token
+                        authOptions.headers['Authorization'] = `Bearer ${accessToken}`;
+                        return await makeRequest(url, authOptions);
+                    } catch (refreshError) {
+                        // Se il refresh fallisce, fai logout
+                        logoutUser();
+                        throw new Error('Sessione scaduta. Effettua nuovamente il login.');
+                    }
+                }
+                throw error;
+            }
+        }
+        
+        // Authentication Functions
+        async function registerUser() {
+            clearMessages();
+            
+            const username = document.getElementById('reg-username').value;
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const confirmPassword = document.getElementById('reg-confirm-password').value;
+            
+            if (!username || !email || !password || !confirmPassword) {
+                showMessage('Tutti i campi sono obbligatori', 'error');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showMessage('Le password non coincidono', 'error');
+                return;
+            }
+            
+            try {
+                const data = await makeRequest('/api/users/', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        username,
+                        email,
+                        password,
+                        confirm_password: confirmPassword,
+                        is_active: true,
+                        is_superuser: false
+                    })
+                });
+                
+                showMessage('Utente registrato con successo! Ora puoi effettuare il login.', 'success');
+                
+                // Pulisci i campi
+                document.getElementById('reg-username').value = '';
+                document.getElementById('reg-email').value = '';
+                document.getElementById('reg-password').value = '';
+                document.getElementById('reg-confirm-password').value = '';
+                
+            } catch (error) {
+                showMessage(`Errore durante la registrazione: ${error.message}`, 'error');
+            }
+        }
+        
+        async function loginUser() {
+            clearMessages();
+            
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            if (!email || !password) {
+                showMessage('Email e password sono obbligatori', 'error');
+                return;
+            }
+            
+            try {
+                const data = await makeRequest('/api/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password })
+                });
+                
+                // Salva i token
+                accessToken = data.data.access_token;
+                refreshTokenValue = data.data.refresh_token;
+                currentUser = data.data.user;
+                
+                localStorage.setItem('access_token', accessToken);
+                localStorage.setItem('refresh_token', refreshTokenValue);
+                
+                showMessage(`Benvenuto, ${currentUser.username}!`, 'success');
+                showAuthenticatedSection();
+                updateUserInfo();
+                updateTokenDisplay();
+                
+            } catch (error) {
+                showMessage(`Errore durante il login: ${error.message}`, 'error');
+            }
+        }
+        
+        async function getUserInfo() {
+            try {
+                const data = await makeAuthenticatedRequest('/api/auth/me');
+                currentUser = data.data;
+                updateUserInfo();
+                showMessage('Informazioni utente aggiornate', 'success');
+            } catch (error) {
+                showMessage(`Errore nel recupero info utente: ${error.message}`, 'error');
+            }
+        }
+        
+        function updateUserInfo() {
+            if (currentUser) {
+                document.getElementById('user-info').innerHTML = `
+                    <h3>👤 Informazioni Utente</h3>
+                    <p><strong>ID:</strong> ${currentUser.id}</p>
+                    <p><strong>Username:</strong> ${currentUser.username}</p>
+                    <p><strong>Email:</strong> ${currentUser.email}</p>
+                    <p><strong>Attivo:</strong> ${currentUser.is_active ? 'Sì' : 'No'}</p>
+                    <p><strong>Superuser:</strong> ${currentUser.is_superuser ? 'Sì' : 'No'}</p>
+                    <p><strong>Creato:</strong> ${new Date(currentUser.created_at).toLocaleString()}</p>
+                    <p><strong>Aggiornato:</strong> ${new Date(currentUser.updated_at).toLocaleString()}</p>
+                `;
+            }
+        }
+        
+        async function refreshToken() {
+            if (!refreshTokenValue) {
+                showMessage('Nessun refresh token disponibile', 'error');
+                return;
+            }
+            
+            try {
+                const data = await makeRequest('/api/auth/refresh', {
+                    method: 'POST',
+                    body: JSON.stringify({ refresh_token: refreshTokenValue })
+                });
+                
+                accessToken = data.data.access_token;
+                localStorage.setItem('access_token', accessToken);
+                
+                showMessage('Token rinnovato con successo', 'success');
+                updateTokenDisplay();
+                
+            } catch (error) {
+                showMessage(`Errore nel rinnovo token: ${error.message}`, 'error');
+                logoutUser();
+            }
+        }
+        
+        async function logoutUser() {
+            try {
+                if (accessToken) {
+                    await makeAuthenticatedRequest('/api/auth/logout', { method: 'POST' });
+                }
+            } catch (error) {
+                console.log('Errore durante logout:', error);
+            } finally {
+                // Pulisci sempre i token locali
+                accessToken = null;
+                refreshTokenValue = null;
+                currentUser = null;
+                
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+                
+                showLoginSection();
+                showMessage('Logout effettuato con successo', 'success');
+                
+                // Pulisci i campi
+                document.getElementById('login-email').value = '';
+                document.getElementById('login-password').value = '';
+            }
+        }
+        
+        // Test Functions
+        async function testServerHealth() {
+            try {
+                const data = await makeRequest('/healthz');
+                showMessage('Server online e funzionante', 'success');
+            } catch (error) {
+                showMessage(`Server non raggiungibile: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testProtectedEndpoint() {
+            try {
+                const data = await makeAuthenticatedRequest('/api/auth/me');
+                showMessage('Endpoint protetto accessibile', 'success');
+            } catch (error) {
+                showMessage(`Errore accesso endpoint protetto: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testInvalidToken() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+                    headers: {
+                        'Authorization': 'Bearer invalid_token_here',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.status === 401) {
+                    showMessage('Token invalido correttamente rifiutato', 'success');
+                } else {
+                    showMessage('ERRORE: Token invalido accettato!', 'error');
+                }
+            } catch (error) {
+                showMessage(`Errore nel test token invalido: ${error.message}`, 'error');
+            }
+        }
+        
+        async function runFullTest() {
+            clearMessages();
+            showMessage('Avvio test completo...', 'info');
+            
+            const tests = [
+                { name: 'Test connessione server', func: testServerHealth },
+                { name: 'Test token invalido', func: testInvalidToken }
+            ];
+            
+            if (accessToken) {
+                tests.push(
+                    { name: 'Test endpoint protetto', func: testProtectedEndpoint },
+                    { name: 'Test refresh token', func: refreshToken }
+                );
+            }
+            
+            for (const test of tests) {
+                try {
+                    await test.func();
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // Pausa tra i test
+                } catch (error) {
+                    showMessage(`Test '${test.name}' fallito: ${error.message}`, 'error');
+                }
+            }
+            
+            showMessage('Test completo terminato', 'info');
+        }
+        
+        // Aggiorna il display dei token all'avvio
+        updateTokenDisplay();
+    </script>
+</body>
+</html>
