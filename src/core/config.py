@@ -18,6 +18,13 @@ class Settings(BaseSettings):
     
     # Database Settings
     DATABASE_URL: str = Field(..., description="Database connection URL")
+    POSTGRES_USER: Optional[str] = Field(default=None, description="PostgreSQL username")
+    POSTGRES_PASSWORD: Optional[str] = Field(default=None, description="PostgreSQL password")
+    POSTGRES_DB: Optional[str] = Field(default=None, description="PostgreSQL database name")
+    
+    # PgAdmin Settings
+    PGADMIN_DEFAULT_EMAIL: Optional[str] = Field(default=None, description="PgAdmin default email")
+    PGADMIN_DEFAULT_PASSWORD: Optional[str] = Field(default=None, description="PgAdmin default password")
     
     # Redis Settings (for caching/sessions)
     REDIS_URL: str = Field(default="redis://localhost:6379/0", description="Redis connection URL")
