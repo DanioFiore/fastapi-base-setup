@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends
 from db.session import get_session
 from sqlmodel import Session, select
-from sqlalchemy.exc import IntegrityError
 from .models import (
     User,
     UserResponse,
@@ -9,14 +8,13 @@ from .models import (
     UserCreateSchema,
     UserUpdateSchema
 )
-from core.utility.responses.models import SuccessResponse, ErrorResponse
-from core.utility.decorators import handle_exceptions, handle_not_found
+from core.utility.decorators import handle_api_exceptions
 
 router = APIRouter()
 
 
-@router.get("/", response_model=SuccessResponse)
-@handle_exceptions(SuccessResponse, ErrorResponse)
+@router.get("/")
+@handle_api_exceptions
 def read_users(session: Session = Depends(get_session)):
     query = select(User)
     result = session.exec(query).all()
@@ -28,9 +26,8 @@ def read_users(session: Session = Depends(get_session)):
 
 
 
-@router.get("/{user_id}", response_model=SuccessResponse)
-@handle_exceptions(SuccessResponse, ErrorResponse)
-@handle_not_found(ErrorResponse, "User not found")
+@router.get("/{user_id}")
+@handle_api_exceptions
 def get_user(user_id: int, session: Session = Depends(get_session)):
     user = session.get(User, user_id)
     if not user:
@@ -38,14 +35,8 @@ def get_user(user_id: int, session: Session = Depends(get_session)):
     
     return UserResponse.model_validate(user)
     
-@router.post("/", response_model=SuccessResponse)
-@handle_exceptions(
-    SuccessResponse, 
-    ErrorResponse,
-    custom_error_messages={
-        IntegrityError: "Username or email already exists"
-    }
-)
+@router.post("/")
+@handle_api_exceptions
 def create_user(
     payload: UserCreateSchema,
     session: Session = Depends(get_session)
@@ -59,9 +50,8 @@ def create_user(
     
     return UserResponse.model_validate(user)
 
-@router.put("/{user_id}", response_model=SuccessResponse)
-@handle_exceptions(SuccessResponse, ErrorResponse)
-@handle_not_found(ErrorResponse, "User not found")
+@router.put("/{user_id}")
+@handle_api_exceptions
 def update_user(
     user_id: int,
     payload: UserUpdateSchema,
@@ -87,9 +77,8 @@ def update_user(
     
     return UserResponse.model_validate(user)
 
-@router.delete("/{user_id}", response_model=SuccessResponse)
-@handle_exceptions(SuccessResponse, ErrorResponse)
-@handle_not_found(ErrorResponse, "User not found")
+@router.delete("/{user_id}")
+@handle_api_exceptions
 def delete_user(user_id: int, session: Session = Depends(get_session)):
     user = session.get(User, user_id)
     if not user:

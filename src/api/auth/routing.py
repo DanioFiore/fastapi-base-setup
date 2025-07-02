@@ -9,9 +9,8 @@ from core.security import (
     verify_token,
     refresh_access_token
 )
-from core.utility.responses.models import SuccessResponse, ErrorResponse
-from core.utility.decorators import handle_exceptions
 from api.auth.models import LoginRequest, LoginResponse, RefreshTokenRequest, RefreshTokenResponse, LogoutResponse
+from core.utility.decorators import handle_api_exceptions
 
 router = APIRouter()
 security = HTTPBearer()
@@ -43,6 +42,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         )
     
     user = session.get(User, int(user_id))
+
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -79,8 +79,8 @@ def get_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials
     except HTTPException:
         return None
 
-@router.post("/login", response_model=SuccessResponse)
-@handle_exceptions(SuccessResponse, ErrorResponse)
+@router.post("/login")
+@handle_api_exceptions
 def login(login_data: LoginRequest, session: Session = Depends(get_session)):
     """
     Authenticate user and return JWT tokens.
@@ -124,8 +124,8 @@ def login(login_data: LoginRequest, session: Session = Depends(get_session)):
         user=UserResponse.model_validate(user)
     )
 
-@router.post("/refresh", response_model=SuccessResponse)
-@handle_exceptions(SuccessResponse, ErrorResponse)
+@router.post("/refresh")
+@handle_api_exceptions
 def refresh_token(refresh_data: RefreshTokenRequest):
     """
     Refresh access token using refresh token.
@@ -139,22 +139,14 @@ def refresh_token(refresh_data: RefreshTokenRequest):
     Raises:
         HTTPException: If refresh token is invalid
     """
-    try:
-        new_access_token = refresh_access_token(refresh_data.refresh_token)
-        return RefreshTokenResponse(
-            access_token=new_access_token,
-            token_type="bearer"
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token"
-        )
+    new_access_token = refresh_access_token(refresh_data.refresh_token)
+    return RefreshTokenResponse(
+        access_token=new_access_token,
+        token_type="bearer"
+    )
 
-@router.post("/logout", response_model=SuccessResponse)
-@handle_exceptions(SuccessResponse, ErrorResponse)
+@router.post("/logout")
+@handle_api_exceptions
 def logout(current_user: User = Depends(get_current_user)):
     """
     Logout user (client-side token invalidation).
@@ -171,8 +163,8 @@ def logout(current_user: User = Depends(get_current_user)):
     """
     return LogoutResponse(message="Successfully logged out")
 
-@router.get("/me", response_model=SuccessResponse)
-@handle_exceptions(SuccessResponse, ErrorResponse)
+@router.get("/me")
+@handle_api_exceptions
 def get_current_user_info(current_user: User = Depends(get_current_user)):
     """
     Get current user information.
@@ -185,8 +177,8 @@ def get_current_user_info(current_user: User = Depends(get_current_user)):
     """
     return UserResponse.model_validate(current_user)
 
-@router.put("/me", response_model=SuccessResponse)
-@handle_exceptions(SuccessResponse, ErrorResponse)
+@router.put("/me")
+@handle_api_exceptions
 def update_current_user(user_data: UserUpdateSchema, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
     """
     Update current user information.
