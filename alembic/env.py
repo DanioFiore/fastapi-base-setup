@@ -1,22 +1,26 @@
-from logging.config import fileConfig
-import sys
+"""
+Alembic environment setup for database migrations.
+"""
+# type: ignore
+# Alembic context module has dynamic attributes that Pylance cannot detect
+# This is a standard alembic env.py file with expected context usage
+
 import os
-
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
-from alembic import context
-
-# Add the src directory to the path so we can import our models
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
-
+import sys
+from logging.config import fileConfig
+from sqlalchemy import engine_from_config, pool
 # Import the Base from our models
 from db.config import Base
-from api.users.models import User  # Import models to register them with Base
+
+
+from alembic import context  # type: ignore
+
+# Add the src directory to the path so we can import our models
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
-config = context.config
+config = getattr(context, "config")
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -46,15 +50,15 @@ def run_migrations_offline() -> None:
 
     """
     url = config.get_main_option("sqlalchemy.url")
-    context.configure(
+    getattr(context, "configure")(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
 
-    with context.begin_transaction():
-        context.run_migrations()
+    with getattr(context, "begin_transaction")():
+        getattr(context, "run_migrations")()
 
 
 def run_migrations_online() -> None:
@@ -71,15 +75,15 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
+        getattr(context, "configure")(
             connection=connection, target_metadata=target_metadata
         )
 
-        with context.begin_transaction():
-            context.run_migrations()
+        with getattr(context, "begin_transaction")():
+            getattr(context, "run_migrations")()
 
 
-if context.is_offline_mode():
+if getattr(context, "is_offline_mode")():
     run_migrations_offline()
 else:
     run_migrations_online()

@@ -1,15 +1,23 @@
+"""
+Middleware for configuring Cross-Origin Resource Sharing (CORS) in FastAPI applications.
+
+This module provides functions to add and configure CORS middleware for both development
+and production environments, allowing control over which origins, methods, and headers
+are permitted to interact with the API.
+"""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from core.config import settings
 
 
 def add_cors_middleware(app: FastAPI) -> None:
     """
     Add CORS middleware to the FastAPI application.
-    
+
     This middleware handles Cross-Origin Resource Sharing (CORS) to allow
     web applications running at different origins to access the API.
-    
+
     Args:
         app: The FastAPI application instance
     """
@@ -27,7 +35,7 @@ def add_cors_middleware(app: FastAPI) -> None:
 def configure_cors_for_development(app: FastAPI) -> None:
     """
     Configure CORS for development environment with more permissive settings.
-    
+
     Args:
         app: The FastAPI application instance
     """
@@ -43,7 +51,7 @@ def configure_cors_for_development(app: FastAPI) -> None:
 def configure_cors_for_production(app: FastAPI) -> None:
     """
     Configure CORS for production environment with strict settings.
-    
+
     Args:
         app: The FastAPI application instance
     """
