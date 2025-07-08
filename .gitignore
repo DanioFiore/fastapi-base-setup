@@ -107,9 +107,6 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-# VS Code
-.vscode/
-
 # FastAPI specific
 .env
 *.env
