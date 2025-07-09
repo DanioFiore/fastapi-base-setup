@@ -66,7 +66,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             )
             return None
 
-    async def dispatch(self, request: Request, call_next: Callable) -> JSONResponse:
+    async def dispatch(self, request: Request, call_next: Callable):
         """
         Process request with rate limiting.
 
@@ -92,7 +92,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         limits = self._get_endpoint_limits(request.url.path)
 
         # Check rate limits
-        rate_limit_result = await self._check_rate_limits(
+        rate_limit_result = self._check_rate_limits(
             client_id, request.url.path, limits
         )
 
@@ -178,7 +178,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             "requests_per_hour": self.default_requests_per_hour,
         }
 
-    async def _check_rate_limits(self, client_id: str, path: str, limits: dict) -> dict:
+    def _check_rate_limits(self, client_id: str, path: str, limits: dict) -> dict:
         """
         Check if client has exceeded rate limits.
 
@@ -194,11 +194,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         # Check minute-based limit
         minute_key = f"rate_limit:{client_id}:{path}:minute:{current_time // 60}"
-        minute_count = await self._increment_counter(minute_key, 60)
+        minute_count = self._increment_counter(minute_key, 60)
 
         # Check hour-based limit
         hour_key = f"rate_limit:{client_id}:{path}:hour:{current_time // 3600}"
-        hour_count = await self._increment_counter(hour_key, 3600)
+        hour_count = self._increment_counter(hour_key, 3600)
 
         # Determine if request is allowed
         minute_exceeded = minute_count > limits["requests_per_minute"]
@@ -216,7 +216,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             "reset_time_hour": (current_time // 3600 + 1) * 3600,
         }
 
-    async def _increment_counter(self, key: str, ttl: int) -> int:
+    def _increment_counter(self, key: str, ttl: int) -> int:
         """
         Increment Redis counter with TTL.
 
