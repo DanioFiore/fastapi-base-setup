@@ -53,19 +53,19 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: fastapi-redis
+    container_name: ky-redis
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
-      - money-wizardry-network
+      - ky-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-    command: redis-server --requirepass admin
+    command: redis-server --requirepass admin --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
 
 volumes:
   postgres_data:
