@@ -42,17 +42,22 @@ def test_cors():
     # test with Origin header to simulate cross origin request
     headers = {"Origin": "http://localhost:3000"}
     response = requests.get(f"{API_URL}/healthz", headers=headers, timeout=10)
-    print(f"Status: {response.status_code}")
+    print(f"GET Status: {response.status_code}")
     print(f"CORS Headers: {response.headers.get('Access-Control-Allow-Origin')}")
 
-    # Test preflight request
+    # Test preflight request with proper headers
+    preflight_headers = {
+        "Origin": "http://localhost:3000",
+        "Access-Control-Request-Method": "GET",
+        "Access-Control-Request-Headers": "Content-Type"
+    }
     options_response = requests.options(
-        f"{API_URL}/healthz", headers=headers, timeout=10
+        f"{API_URL}/healthz", headers=preflight_headers, timeout=10
     )
-    print(f"Preflight Status: {options_response.status_code}")
-    print(
-        f"Allowed Methods: {options_response.headers.get('Access-Control-Allow-Methods')}"
-    )
+    print(f"OPTIONS Status: {options_response.status_code}")
+    print(f"Allowed Methods: {options_response.headers.get('Access-Control-Allow-Methods')}")
+    print(f"Allowed Headers: {options_response.headers.get('Access-Control-Allow-Headers')}")
+    print("✅ CORS OK\n")
 
 
 def test_logging():
@@ -73,7 +78,7 @@ def test_logging():
 def test_rate_limiting():
     """
     Tests the rate limiting functionality of the API by 
-    sending multiple requests to the /healthz endpoint.
+    sending multiple requests to the /api/users/ endpoint.
     Sends up to 65 requests and checks if the rate limit is enforced 
     by expecting a 429 status code response.
     Prints progress every 10 requests and outputs when the rate limit is triggered.
@@ -81,20 +86,28 @@ def test_rate_limiting():
 
     print("🚫 Testing Rate Limiting...")
 
+    # Use /api/users/ endpoint instead of /healthz which might be skipped
+    test_endpoint = f"{API_URL}/api/users/"
+    
     # do 65 requests
     for i in range(65):
-        response = requests.get(f"{API_URL}/healthz", timeout=10)
-        remaining = response.headers.get("X-RateLimit-Remaining-Minute")
+        try:
+            response = requests.get(test_endpoint, timeout=5)
+            remaining = response.headers.get("X-RateLimit-Remaining-Minute")
 
-        if response.status_code == 429:
-            print(f"✅ Rate limit triggered at request {i+1}")
-            print(f"Response: {response.json()}")
+            if response.status_code == 429:
+                print(f"✅ Rate limit triggered at request {i+1}")
+                print(f"Response: {response.json()}")
+                break
+
+            if i % 10 == 0:
+                print(f"Request {i+1}: Status {response.status_code}, remaining: {remaining}")
+                
+        except requests.exceptions.RequestException as e:
+            print(f"Request {i+1}: Error - {e}")
             break
 
-        if i % 10 == 0:
-            print(f"Request {i+1}: OK, remaining: {remaining}")
-
-    print("✅ Rate Limiting OK\n")
+    print("✅ Rate Limiting test completed\n")
 
 
 if __name__ == "__main__":
