@@ -45,6 +45,8 @@ def configure_cors_for_development(app: FastAPI) -> None:
         allow_credentials=True,
         allow_methods=["*"],  # Allow all methods
         allow_headers=["*"],  # Allow all headers
+        expose_headers=["X-Total-Count", "X-Page-Count"],  # Expose these headers
+        max_age=86400,
     )
 
 
