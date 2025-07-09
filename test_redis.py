@@ -4,19 +4,29 @@ Script to test Redis connection, operations, and rate limiting.
 """
 
 import time
+import os
 from typing import Any, Dict, List, Optional
 
 import redis
 import requests
 from redis.exceptions import RedisError
 
-from core.config import settings
+from src.core.config import settings
 
-API_URL = f"http://localhost:{settings.APP_PORT}"
 REDIS_HOST = settings.REDIS_HOST
 REDIS_PORT = settings.REDIS_PORT
 REDIS_PASSWORD = settings.REDIS_PASSWORD
 REDIS_DB = settings.REDIS_DB
+
+# Detect if we're running inside Docker container
+if os.path.exists('/.dockerenv'):
+    # Inside container - use internal endpoint
+    API_URL = f"http://127.0.0.1:{settings.APP_PORT}"
+    print("🐳 Running inside Docker container")
+else:
+    # Outside container - use external endpoint
+    API_URL = f"http://localhost:{settings.APP_PORT}"
+    print("💻 Running on host machine")
 
 
 def test_redis_connection() -> Optional[redis.Redis]:
@@ -161,16 +171,16 @@ def test_api_rate_limiting():
     success_count = 0
     rate_limited_count = 0
 
-    print("Making 70 requests to trigger rate limiting...")
+    print("Making 40 requests to trigger rate limiting...")
 
-    for i in range(70):
+    for i in range(40):
         try:
             response = requests.get(f"{API_URL}/healthz", timeout=5)
 
             if response.status_code == 200:
                 success_count += 1
                 remaining = response.headers.get("X-RateLimit-Remaining-Minute", "N/A")
-                if i % 10 == 0 or int(remaining) < 10 if remaining != "N/A" else False:
+                if i % 5 == 0 or int(remaining) < 5 if remaining != "N/A" else False:
                     print(f"  Request {i+1}: OK (remaining: {remaining})")
             elif response.status_code == 429:
                 rate_limited_count += 1
@@ -230,12 +240,34 @@ def test_redis_monitoring(client: redis.Redis):
         print(f"❌ Redis monitoring data processing failed: {e}")
 
 
+def show_rate_limit_info():
+    """
+    Show current rate limit configuration and settings.
+    """
+    print("\n⚙️  Rate Limit Configuration...")
+    
+    try:
+        from src.core.config import settings
+        
+        print(f"Rate limit per minute: {getattr(settings, 'RATE_LIMIT_REQUESTS_PER_MINUTE', 'Not set')}")
+        print(f"Rate limit per hour: {getattr(settings, 'RATE_LIMIT_REQUESTS_PER_HOUR', 'Not set')}")
+        print(f"API URL for testing: {API_URL}")
+        
+    except ImportError as e:
+        print(f"❌ Could not import settings: {e}")
+    except Exception as e:
+        print(f"❌ Error getting rate limit info: {e}")
+
+
 def main():
     """
     Main function to run redis tests.
     """
     print("🧪 Redis Test Suite")
     print("=" * 50)
+
+    # Show rate limit configuration first
+    show_rate_limit_info()
 
     redis_client = test_redis_connection()
 
@@ -250,6 +282,9 @@ def main():
 
     # Test rate limiting via API (works even without Redis)
     test_api_rate_limiting()
+
+    # Show rate limit configuration
+    show_rate_limit_info()
 
     print("\n" + "=" * 50)
     print("🏁 Test completed!")
